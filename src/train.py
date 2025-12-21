@@ -1,0 +1,98 @@
+import os
+import torch
+from datasets import load_dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    BitsAndBytesConfig,
+    TrainingArguments
+)
+from peft import LoraConfig, get_peft_model
+from trl import SFTTrainer, SFTConfig
+
+model_id = "model"
+data_path = "data/TISER_formatted_train.jsonl"
+output_dir = "model/qwen2.5-7b-tiser-finetuned"
+
+# Hyperparameters
+MAX_SEQ_LENGTH = 8192
+BATCH_SIZE = 8
+GRAD_ACCUMULATION = 2
+LEARNING_RATE = 2e-4
+NUM_EPOCHS = 3
+
+def train():
+    print(f"Loading model: {model_id}...")
+
+    # 1. Load Tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+
+    # 2. Load model (Bfloat16 + Flash Attention 2)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        device_map="auto",
+        torch_dtype=torch.bfloat16, 
+        attn_implementation="flash_attention_2", 
+        trust_remote_code=True
+    )
+
+    # 3. LoRA configuration
+    peft_config = LoraConfig(
+        r=16,                       # LoRA Rank
+        lora_alpha=32,              # Usally twice the LoRA Rank
+        lora_dropout=0.05,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules="all-linear" # Finetune all linear
+    )
+
+    # 4. Load dataset
+    print(f"Loading dataset from {data_path}...")
+    dataset = load_dataset("json", data_files=data_path, split="train")
+    print(f"Total training samples: {len(dataset)}")
+
+    # 5. Set training parameters
+    training_args = SFTConfig(
+        output_dir=output_dir,
+        num_train_epochs=NUM_EPOCHS,
+        per_device_train_batch_size=BATCH_SIZE,
+        gradient_accumulation_steps=GRAD_ACCUMULATION,
+        learning_rate=LEARNING_RATE,
+        lr_scheduler_type="cosine",
+        warmup_ratio=0.03,
+        weight_decay=0.01,
+        
+        bf16=True,
+        logging_steps=10,
+        save_strategy="epoch",
+        report_to="wandb",
+        run_name="Qwen2.5-7B-TISER-Run1",
+        
+        # Sequence length
+        max_seq_length=MAX_SEQ_LENGTH,
+        packing=False,
+        dataset_kwargs={"add_special_tokens": False}
+    )
+
+    # 6. Initialize Trainer
+    trainer = SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        peft_config=peft_config,
+        args=training_args,
+    )
+
+    print("Starting training...")
+    trainer.train()
+
+    print(f"Saving model to {output_dir}...")
+    trainer.save_model(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    print("Training complete!")
+
+if __name__ == "__main__":
+    train()
