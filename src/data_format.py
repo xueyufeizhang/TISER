@@ -22,11 +22,11 @@ def format_tiser_data_simple(input_path):
                     assistant_text = entry.get('output', "")
 
                     sample = {
-                        "messages": {
+                        "messages": [
                             {"role": "system", "content": system_text},
                             {"role": "user", "content": user_text},
                             {"role": "assistant", "content": assistant_text}
-                        }
+                        ]
                     }
                     formatted_data.append(sample)
             
