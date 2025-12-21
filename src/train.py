@@ -10,9 +10,9 @@ from transformers import (
 from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer, SFTConfig
 
-model_id = "model"
+model_id = "model/Qwen/Qwen2.5-7B-Instruct"
 data_path = "data/TISER_formatted_train.jsonl"
-output_dir = "model/qwen2.5-7b-tiser-finetuned"
+output_dir = "model/Qwen/Qwen2.5-7B-TISER-Finetuned"
 
 # Hyperparameters
 MAX_SEQ_LENGTH = 8192
