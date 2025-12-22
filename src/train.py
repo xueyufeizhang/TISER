@@ -12,10 +12,10 @@ from trl import SFTTrainer, SFTConfig
 
 model_id = "model/Qwen/Qwen2.5-7B-Instruct"
 data_path = "data/TISER_formatted_train.jsonl"
-output_dir = "model/Qwen/Qwen2.5-7B-TISER-Finetuned"
+output_dir = "model/Qwen/Qwen2.5-7B-Instruct-LoRA"
 
 # Hyperparameters
-MAX_SEQ_LENGTH = 8192
+MAX_SEQ_LENGTH = 2048
 BATCH_SIZE = 8
 GRAD_ACCUMULATION = 2
 LEARNING_RATE = 2e-4
@@ -24,13 +24,13 @@ NUM_EPOCHS = 3
 def train():
     print(f"Loading model: {model_id}...")
 
-    # 1. Load Tokenizer
+    # Load Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    # 2. Load model (Bfloat16 + Flash Attention 2)
+    # Load model (Bfloat16 + Flash Attention 2)
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         device_map="auto",
@@ -39,7 +39,7 @@ def train():
         trust_remote_code=True
     )
 
-    # 3. LoRA configuration
+    # LoRA configuration
     peft_config = LoraConfig(
         r=16,                       # LoRA Rank
         lora_alpha=32,              # Usally twice the LoRA Rank
@@ -49,12 +49,12 @@ def train():
         target_modules="all-linear" # Finetune all linear
     )
 
-    # 4. Load dataset
+    # Load dataset
     print(f"Loading dataset from {data_path}...")
     dataset = load_dataset("json", data_files=data_path, split="train")
     print(f"Total training samples: {len(dataset)}")
 
-    # 5. Set training parameters
+    # Set training parameters
     training_args = SFTConfig(
         output_dir=output_dir,
         num_train_epochs=NUM_EPOCHS,
@@ -72,15 +72,15 @@ def train():
         run_name="Qwen2.5-7B-TISER-Run1",
         
         # Sequence length
-        max_seq_length=MAX_SEQ_LENGTH,
+        max_length=MAX_SEQ_LENGTH,
         packing=False,
         dataset_kwargs={"add_special_tokens": False}
     )
 
-    # 6. Initialize Trainer
+    # Initialize Trainer
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=dataset,
         peft_config=peft_config,
         args=training_args,
