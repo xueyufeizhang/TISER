@@ -1,13 +1,14 @@
 import torch
+import os
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
 from peft import LoraConfig, PeftModelForCausalLM
 from trl import SFTConfig, SFTTrainer
 
 def train():
-    model_id = 'mistralai/Ministral-3-8B-Instruct-2512-BF16'
+    model_id = 'mistralai/Mistral-7B-Instruct-v0.3'
     data_path = 'data/TISER_formatted_train.jsonl'
-    output_dir = 'model/Ministral/Ministral-3-8B-Instruct-2512-BF16-TISER'
+    output_dir = 'model/Mistral/Mistral-7B-Instruct-v0.3-TISER'
 
     print(f"Loading model: {model_id}...")
 
@@ -36,7 +37,7 @@ def train():
         lora_dropout=0.05,
         bias='none',
         task_type='CAUSAL_LM',
-        target_modules='all_linear'
+        target_modules='all-linear'
     )
   # model = PeftModelForCausalLM.from_pretrained(model, peft_config)
   
@@ -51,17 +52,15 @@ def train():
         bf16=True,
         per_device_train_batch_size=8,
         gradient_accumulation_steps=2,
-        learning_rate=1e-4,
+        learning_rate=2e-4,
         lr_scheduler_type="cosine",
         warmup_ratio=0.05,
         weight_decay=0.01,
 
-        max_steps=500,
-        logging_steps=5,
-        save_strategy="epoch",
+        logging_steps=10,
+        save_strategy='epoch',
         report_to='wandb',
-        run_name='Ministral-3-8B-Instruct-2512-BF16-TISER',
-        # gradient_checkpointing=True,
+        run_name='Mistral-7B-Instruct-v0.3-TISER',
         max_length=2048,
         packing=True,
         optim='paged_adamw_8bit'
@@ -85,4 +84,14 @@ def train():
     print("Training complete!")
 
 if __name__ == "__main__":
-    train()
+    try:
+        train()
+    except Exception as e:
+        print(f"Error occurs: {e}")
+    finally:
+        torch.cuda.empty_cache()
+        with open("train_finished.txt", "w") as f:
+            f.write("done")
+        print("Shutdown pending...")
+        os.system("vastai stop instance 29300840")
+        

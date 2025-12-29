@@ -5,13 +5,13 @@ import os
 
 # ================= 配置区域 =================
 # 1. 原始底座模型路径 (你下载 Qwen2.5 的文件夹)
-BASE_MODEL_PATH = "/root/autodl-tmp/TISER/model/Qwen/Qwen2.5-7B-Instruct"
+BASE_MODEL_PATH = 'mistralai/Mistral-7B-Instruct-v0.3'
 
 # 2. 训练好的 LoRA 权重路径 (包含 adapter_model.bin 的文件夹)
-LORA_ADAPTER_PATH = "/root/autodl-tmp/TISER/model/Qwen/Qwen2.5-7B-TISER-Finetuned"
+LORA_ADAPTER_PATH = 'model/Mistral/Adapter'
 
 # 3. 合并后的输出路径 (准备发给队友的文件夹)
-OUTPUT_DIR = "/root/autodl-tmp/TISER/model/Qwen/Qwen2.5-7B-Instruct-TISER"
+OUTPUT_DIR = 'model/Mistral/Mistral-7B-Instruct-v0.3-TISER'
 # ===========================================
 
 def merge():
