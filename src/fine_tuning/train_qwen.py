@@ -33,7 +33,7 @@ def train():
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         device_map='auto',
-        torch_dtype=torch.bfloat16, 
+        dtype=torch.bfloat16, 
         attn_implementation="flash_attention_2", 
         trust_remote_code=True
     )
@@ -42,7 +42,7 @@ def train():
     def formatting_prompts_func(data):
         text = {
             "prompt": data['prompt'].strip(),
-            "completion": "\n" + data['output'].strip()
+            "completion": " " + data['output'].strip()
         }
         return text
     
@@ -61,7 +61,11 @@ def train():
     print(f"Loading dataset from {data_path}...")
     dataset = load_dataset('json', data_files=data_path, split='train')
     dataset = dataset.map(formatting_prompts_func)
-    print(f"Total training samples: {len(dataset)}")
+    dataset_split = dataset.train_test_split(test_size=1000, seed=114)
+    train_dataset = dataset_split['train']
+    eval_dataset = dataset_split['test']
+    print(f"Total training samples: {len(train_dataset)}")
+    print(f"Total evaluation samples: {len(eval_dataset)}")
 
     # Set training parameters
     training_args = SFTConfig(
@@ -77,6 +81,8 @@ def train():
         bf16=True,
         logging_steps=10,
         save_strategy="epoch",
+        eval_strategy="steps",
+        eval_steps=1000,
         report_to="wandb",
         run_name="Qwen2.5-7B-TISER",
         
@@ -85,14 +91,14 @@ def train():
         packing=False,
         dataset_kwargs={"add_special_tokens": False},
         completion_only_loss=True,
-        dataset_text_field="text",
     )
 
     # Initialize Trainer
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
-        train_dataset=dataset,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         peft_config=peft_config,
         args=training_args,
     )
