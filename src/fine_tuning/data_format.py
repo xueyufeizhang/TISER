@@ -17,8 +17,9 @@ def format_tiser_data_simple(input_path):
 
                 try:
                     entry = json.loads(line)
-                    system_text = entry.get('prompt', "")
-                    user_text = entry.get('question', "")
+                    prompt = entry.get('prompt', "")
+                    system_text = prompt.split("Question:")[0].strip()
+                    user_text = "Question: " + prompt.split("Question:")[1].strip()
                     assistant_text = entry.get('output', "")
 
                     sample = {
