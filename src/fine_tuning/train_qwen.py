@@ -7,7 +7,7 @@ from transformers import (
     BitsAndBytesConfig
 )
 from peft import LoraConfig
-from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
+from trl import SFTTrainer, SFTConfig
 
 model_id = "Qwen/Qwen2.5-7B"
 data_path = "data/TISER_train.json"
@@ -42,18 +42,12 @@ def train():
     def formatting_prompts_func(data):
         output_texts = []
         for i in range(len(data['prompt'])):
-            text = (
-                f"Instruction: {data['prompt'][i].strip()}\n\n"
-                f"Response: {data['output'][i].strip()}{tokenizer.eos_token}"
-            )
+            text = {
+                "prompt": data['prompt'][i],
+                "completion": data['output'][i]
+            }
             output_texts.append(text)
         return output_texts
-    
-    response_template = "Response:"
-    collator = DataCollatorForCompletionOnlyLM(
-        response_template=response_template, 
-        tokenizer=tokenizer
-    )
     
 
     # LoRA configuration
@@ -91,7 +85,8 @@ def train():
         # Sequence length
         max_length=MAX_SEQ_LENGTH,
         packing=False,
-        dataset_kwargs={"add_special_tokens": False}
+        dataset_kwargs={"add_special_tokens": False},
+        completion_only_loss=True,
     )
 
     # Initialize Trainer
@@ -102,7 +97,6 @@ def train():
         peft_config=peft_config,
         args=training_args,
         formatting_func=formatting_prompts_func,
-        data_collator=collator,
     )
 
     print("Starting training...")
