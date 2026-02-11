@@ -7,11 +7,11 @@ from transformers import (
     BitsAndBytesConfig
 )
 from peft import LoraConfig
-from trl import SFTTrainer, SFTConfig
+from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 
-model_id = "model/Qwen/Qwen2.5-7B-Instruct"
-data_path = "data/TISER_formatted_train.jsonl"
-output_dir = "model/Qwen/Qwen2.5-7B-Instruct-LoRA"
+model_id = "Qwen/Qwen2.5-7B"
+data_path = "data/TISER_train.json"
+output_dir = "model/Qwen/Qwen2.5-7B-LoRA"
 
 # Hyperparameters
 MAX_SEQ_LENGTH = 2048
@@ -37,6 +37,24 @@ def train():
         attn_implementation="flash_attention_2", 
         trust_remote_code=True
     )
+
+
+    def formatting_prompts_func(data):
+        output_texts = []
+        for i in range(len(data['prompt'])):
+            text = (
+                f"Instruction: {data['prompt'][i].strip()}\n\n"
+                f"Response: {data['output'][i].strip()}{tokenizer.eos_token}"
+            )
+            output_texts.append(text)
+        return output_texts
+    
+    response_template = "Response:"
+    collator = DataCollatorForCompletionOnlyLM(
+        response_template=response_template, 
+        tokenizer=tokenizer
+    )
+    
 
     # LoRA configuration
     peft_config = LoraConfig(
@@ -68,7 +86,7 @@ def train():
         logging_steps=10,
         save_strategy="epoch",
         report_to="wandb",
-        run_name="Qwen2.5-7B-TISER-Run1",
+        run_name="Qwen2.5-7B-TISER",
         
         # Sequence length
         max_length=MAX_SEQ_LENGTH,
@@ -83,6 +101,8 @@ def train():
         train_dataset=dataset,
         peft_config=peft_config,
         args=training_args,
+        formatting_func=formatting_prompts_func,
+        data_collator=collator,
     )
 
     print("Starting training...")
@@ -94,4 +114,13 @@ def train():
     print("Training complete!")
 
 if __name__ == "__main__":
-    train()
+    try:
+        train()
+    except Exception as e:
+        print(f"Error occurs: {e}")
+    finally:
+        torch.cuda.empty_cache()
+        with open("train_finished.txt", "w") as f:
+            f.write("done")
+        print("Shutdown pending...")
+        os.system("vastai stop instance 31221501")
