@@ -40,14 +40,11 @@ def train():
 
 
     def formatting_prompts_func(data):
-        output_texts = []
-        for i in range(len(data['prompt'])):
-            text = {
-                "prompt": data['prompt'][i],
-                "completion": data['output'][i]
-            }
-            output_texts.append(text)
-        return output_texts
+        text = {
+            "prompt": data['prompt'],
+            "completion": data['output']
+        }
+        return text
     
 
     # LoRA configuration
@@ -63,6 +60,7 @@ def train():
     # Load dataset
     print(f"Loading dataset from {data_path}...")
     dataset = load_dataset('json', data_files=data_path, split='train')
+    dataset = dataset.map(formatting_prompts_func)
     print(f"Total training samples: {len(dataset)}")
 
     # Set training parameters
@@ -87,6 +85,7 @@ def train():
         packing=False,
         dataset_kwargs={"add_special_tokens": False},
         completion_only_loss=True,
+        dataset_text_field="text",
     )
 
     # Initialize Trainer
@@ -96,7 +95,6 @@ def train():
         train_dataset=dataset,
         peft_config=peft_config,
         args=training_args,
-        formatting_func=formatting_prompts_func,
     )
 
     print("Starting training...")
