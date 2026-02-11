@@ -41,8 +41,8 @@ def train():
 
     def formatting_prompts_func(data):
         text = {
-            "prompt": data['prompt'],
-            "completion": data['output']
+            "prompt": data['prompt'].strip(),
+            "completion": "\n" + data['output'].strip()
         }
         return text
     
