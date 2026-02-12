@@ -71,6 +71,7 @@ def train():
     training_args = SFTConfig(
         output_dir=output_dir,
         num_train_epochs=NUM_EPOCHS,
+        max_steps=2000,
         per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUMULATION,
         learning_rate=LEARNING_RATE,
@@ -82,7 +83,7 @@ def train():
         logging_steps=10,
         # save_strategy="epoch",
         save_strategy="steps",
-        save_steps=1000,
+        save_steps=500,
         eval_strategy="steps",
         eval_steps=500,
         report_to="wandb",
