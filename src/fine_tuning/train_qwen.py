@@ -18,7 +18,7 @@ MAX_SEQ_LENGTH = 2048
 BATCH_SIZE = 8
 GRAD_ACCUMULATION = 2
 LEARNING_RATE = 2e-4
-NUM_EPOCHS = 3
+NUM_EPOCHS = 1
 
 def train():
     print(f"Loading model: {model_id}...")
@@ -80,9 +80,11 @@ def train():
         
         bf16=True,
         logging_steps=10,
-        save_strategy="epoch",
+        # save_strategy="epoch",
+        save_strategy="steps",
+        save_steps=1000,
         eval_strategy="steps",
-        eval_steps=1000,
+        eval_steps=500,
         report_to="wandb",
         run_name="Qwen2.5-7B-TISER",
         
